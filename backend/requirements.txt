@@ -1,0 +1,14 @@
+fastapi
+uvicorn[standard]
+torch
+numpy
+scipy
+python-multipart
+pydantic
+sqlalchemy
+pymysql
+passlib[bcrypt]
+python-jose[cryptography]
+python-dotenv
+email-validator
+bcrypt==4.0.1

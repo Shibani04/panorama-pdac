@@ -1,0 +1,21 @@
+# Python
+__pycache__/
+*.pyc
+venv/
+.venv/
+
+# Env secrets — never commit these
+.env
+backend/.env
+
+# Frontend
+node_modules/
+frontend/dist/
+frontend/node_modules/
+
+# Uploaded patient data — never commit real/test CT files
+backend/uploads/
+
+# OS / editor junk
+.DS_Store
+*.log
