@@ -37,6 +37,16 @@ class CaseRequest(Base):
     ct_filepath = Column(String(255), nullable=True)
     prediction = Column(Float, nullable=True)
     gradcam_path = Column(String(255), nullable=True)
+    doctor_notes = Column(Text, nullable=True)
     radiologist_notes = Column(Text, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     completed_at = Column(DateTime, nullable=True)
+
+class Notification(Base):
+    __tablename__ = "notifications"
+    id = Column(String(50), primary_key=True, default=lambda: gen_id("NOT"))
+    user_id = Column(String(50), ForeignKey("users.id"), nullable=False)
+    request_id = Column(String(50), ForeignKey("case_requests.id"), nullable=True)
+    message = Column(String(255), nullable=False)
+    is_read = Column(Integer, default=0)
+    created_at = Column(DateTime, default=datetime.utcnow)

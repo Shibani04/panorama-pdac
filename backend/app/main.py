@@ -1,15 +1,24 @@
 from fastapi import FastAPI
+from sqlalchemy import inspect, text
 from fastapi.middleware.cors import CORSMiddleware
 from app.database import Base, engine
-from app.routers import upload, explain, auth_router, patients, requests
+from app.routers import upload, explain, auth_router, patients, requests, notifications, radiologists
 
 Base.metadata.create_all(bind=engine)
+
+# Keep existing installations compatible with the request-owned prescription field.
+with engine.begin() as connection:
+    columns = {column["name"] for column in inspect(engine).get_columns("case_requests")}
+    if "prescription" not in columns:
+        connection.execute(text("ALTER TABLE case_requests ADD COLUMN prescription TEXT NULL"))
 
 app = FastAPI(title="PANORAMA PDAC Detection API")
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost:5173"],
+    allow_origin_regex=r"https?://(localhost|127\.0\.0\.1)(:\d+)?$",
+    allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -19,6 +28,8 @@ app.include_router(patients.router, prefix="/api/patients", tags=["patients"])
 app.include_router(requests.router, prefix="/api/requests", tags=["requests"])
 app.include_router(upload.router, prefix="/api/upload", tags=["upload"])
 app.include_router(explain.router, prefix="/api/explain", tags=["explain"])
+app.include_router(notifications.router, prefix="/api/notifications", tags=["notifications"])
+app.include_router(radiologists.router, prefix="/api/radiologists", tags=["radiologists"])
 
 @app.get("/health")
 def health():

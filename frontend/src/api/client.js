@@ -91,3 +91,60 @@ export async function completeRequest(requestId, notes, referralPathway) {
   if (!res.ok) throw new Error(extractErrorMessage(body))
   return body
 }
+
+export async function listMyNotifications() {
+  const res = await fetch(`${API_BASE}/notifications/mine`, { headers: authHeaders() })
+  const body = await res.json()
+  if (!res.ok) throw new Error(extractErrorMessage(body))
+  return body
+}
+
+export async function getUnreadCount() {
+  const res = await fetch(`${API_BASE}/notifications/unread-count`, { headers: authHeaders() })
+  const body = await res.json()
+  if (!res.ok) throw new Error(extractErrorMessage(body))
+  return body
+}
+
+export async function markNotificationRead(notificationId) {
+  const res = await fetch(`${API_BASE}/notifications/${notificationId}/read`, { method: 'PATCH', headers: authHeaders() })
+  const body = await res.json()
+  if (!res.ok) throw new Error(extractErrorMessage(body))
+  return body
+}
+
+export async function markAllNotificationsRead() {
+  const res = await fetch(`${API_BASE}/notifications/read-all`, { method: 'PATCH', headers: authHeaders() })
+  const body = await res.json()
+  if (!res.ok) throw new Error(extractErrorMessage(body))
+  return body
+}
+
+export async function listRadiologists() {
+  const res = await fetch(`${API_BASE}/radiologists/`, { headers: authHeaders() })
+  const body = await res.json()
+  if (!res.ok) throw new Error(extractErrorMessage(body))
+  return body
+}
+
+export async function updatePrescription(requestId, prescription) {
+  const res = await fetch(`${API_BASE}/requests/${requestId}/prescription`, {
+    method: 'PATCH',
+    headers: authHeaders(),
+    body: JSON.stringify({ prescription }),
+  })
+  const body = await res.json()
+  if (!res.ok) throw new Error(extractErrorMessage(body))
+  return body
+}
+
+export async function updatePatient(patientId, data) {
+  const res = await fetch(`${API_BASE}/patients/${patientId}`, {
+    method: 'PATCH',
+    headers: authHeaders(),
+    body: JSON.stringify(data),
+  })
+  const body = await res.json()
+  if (!res.ok) throw new Error(extractErrorMessage(body))
+  return body.patient
+}

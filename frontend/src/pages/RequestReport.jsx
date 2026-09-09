@@ -4,6 +4,7 @@ import { ArrowLeft, Download, AlertTriangle, CheckCircle2 } from 'lucide-react'
 import jsPDF from 'jspdf'
 import { getRequestDetail } from '../api/client'
 import { useAuth } from '../context/AuthContext'
+import RequestActionPanel from '../components/RequestActionPanel'
 
 function RequestReport() {
   const { caseId } = useParams()
@@ -20,7 +21,7 @@ function RequestReport() {
     const pred = data.prediction !== null ? `${(data.prediction * 100).toFixed(1)}%` : 'Pending'
 
     doc.setFontSize(16)
-    doc.text('PANORAMA PDAC Detection — Report', 14, 20)
+    doc.text('PANCREAAI PDAC Detection — Report', 14, 20)
 
     doc.setFontSize(10)
     doc.text(`Request ID: ${data.id}`, 14, 32)
@@ -36,6 +37,11 @@ function RequestReport() {
     doc.text('Radiologist notes:', 14, 80)
     const notesLines = doc.splitTextToSize(data.radiologist_notes || 'No notes recorded.', 180)
     doc.text(notesLines, 14, 86)
+
+    const prescriptionY = 86 + (notesLines.length * 5) + 10
+    doc.text('Doctor prescription:', 14, prescriptionY)
+    const prescriptionLines = doc.splitTextToSize(data.prescription || 'No prescription recorded.', 180)
+    doc.text(prescriptionLines, 14, prescriptionY + 6)
 
     doc.setFontSize(8)
     doc.text(
@@ -68,11 +74,11 @@ function RequestReport() {
 
   return (
     <div className="min-h-screen bg-bg text-text">
-      <header className="border-b border-border px-6 py-4 flex items-center justify-between">
+      <header className="sticky top-0 z-10 bg-panel/95 backdrop-blur border-b border-border px-6 py-4 flex items-center justify-between">
         <Link to={backTo} className="flex items-center gap-1.5 text-sm text-text-muted hover:text-text">
           <ArrowLeft size={16} /> Back to dashboard
         </Link>
-        {data.status === 'reviewed' && (
+        {data.status === 'reviewed' && user?.role === 'doctor' && (
           <button
             onClick={downloadPdf}
             className="flex items-center gap-1.5 text-sm font-medium bg-text text-bg px-3 py-1.5 rounded"
@@ -83,11 +89,11 @@ function RequestReport() {
       </header>
 
       <div className="max-w-2xl mx-auto p-6 space-y-4">
-        <div className="bg-panel border border-border rounded-lg p-6">
+        <div className="bg-panel border border-border rounded-xl shadow-[0_6px_20px_rgba(49,87,183,0.04)] p-6">
           <div className="flex items-center justify-between mb-4">
             <h1 className="text-lg font-semibold font-mono">{data.id}</h1>
-            <span className="text-xs px-2 py-0.5 rounded bg-bg border border-border text-text-muted">
-              {data.status}
+            <span className={`text-xs px-2 py-0.5 rounded border ${data.status === 'reviewed' ? 'border-flag-negative bg-flag-negative-bg text-flag-negative' : 'bg-bg border-border text-text-muted'}`}>
+              {data.status === 'reviewed' ? 'Reviewed' : data.status === 'pending' ? 'Pending' : 'Uploaded'}
             </span>
           </div>
 
@@ -105,8 +111,9 @@ function RequestReport() {
         </div>
 
         {data.prediction !== null && (
-          <div className={`border rounded-lg p-6 ${isPdac ? 'bg-flag-positive-bg border-flag-positive' : 'bg-flag-negative-bg border-flag-negative'}`}>
-            <div className="flex items-center gap-3">
+          <div className={`border rounded-xl p-6 shadow-[0_6px_20px_rgba(49,87,183,0.04)] ${isPdac ? 'bg-flag-positive-bg border-flag-positive' : 'bg-flag-negative-bg border-flag-negative'}`}>
+            <div className="flex items-start justify-between gap-4">
+              <div className="flex items-center gap-3">
               {isPdac ? (
                 <AlertTriangle className="text-flag-positive" size={28} />
               ) : (
@@ -118,6 +125,11 @@ function RequestReport() {
                 </p>
                 <p className="text-2xl font-semibold">{(data.prediction * 100).toFixed(1)}%</p>
               </div>
+              </div>
+              <span className="text-xs font-mono uppercase tracking-wide">AI result</span>
+            </div>
+            <div className="mt-5 h-2 rounded-full bg-white/70 overflow-hidden">
+              <div className={`h-full ${isPdac ? 'bg-flag-positive' : 'bg-flag-negative'}`} style={{ width: `${data.prediction * 100}%` }} />
             </div>
             <p className="text-xs text-text-muted mt-3">
               AI prediction is a clinical decision-support output, not an autonomous diagnosis.
@@ -126,7 +138,10 @@ function RequestReport() {
         )}
 
         {data.status === 'reviewed' && (
-          <div className="bg-panel border border-border rounded-lg p-6">
+          <div className="bg-panel border border-border rounded-xl shadow-[0_6px_20px_rgba(49,87,183,0.04)] p-6">
+            <div className="flex items-center gap-2 mb-4 text-sm font-medium text-flag-negative">
+              <CheckCircle2 size={17} /> Reviewed by radiologist
+            </div>
             <p className="text-xs font-mono text-text-muted uppercase tracking-wide mb-2">
               Referral pathway
             </p>
@@ -136,15 +151,27 @@ function RequestReport() {
               Radiologist notes
             </p>
             <p className="text-sm whitespace-pre-wrap">{data.radiologist_notes || 'No notes recorded.'}</p>
+
+            <p className="text-xs font-mono text-text-muted uppercase tracking-wide mb-2 mt-5">
+              Doctor prescription
+            </p>
+            <p className="text-sm whitespace-pre-wrap">{data.prescription || 'No prescription recorded.'}</p>
           </div>
         )}
 
         {data.status !== 'reviewed' && (
-          <div className="bg-panel border border-border rounded-lg p-6">
+        user?.role === 'radiologist' ? (
+            <RequestActionPanel
+            request={data}
+            onUpdate={() => getRequestDetail(caseId).then(setData)}
+            />
+        ) : (
+            <div className="bg-panel border border-border rounded-lg p-6">
             <p className="text-sm text-text-muted">
-              {data.status === 'pending' ? 'Awaiting radiologist review.' : 'Analysis complete — awaiting radiologist sign-off.'}
+                {data.status === 'pending' ? 'Awaiting radiologist review.' : 'Analysis complete — awaiting radiologist sign-off.'}
             </p>
-          </div>
+            </div>
+        )
         )}
       </div>
     </div>

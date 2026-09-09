@@ -1,18 +1,31 @@
 @import "tailwindcss";
 
 @theme {
-  --color-bg: #F7F7F5;
+  --color-bg: #F4F7F9;
   --color-panel: #FFFFFF;
-  --color-border: #E4E3DF;
-  --color-text: #1C1D1F;
-  --color-text-muted: #6B6B68;
-  --color-flag-positive: #B0413E;
-  --color-flag-positive-bg: #F7E8E7;
-  --color-flag-negative: #2F6F5E;
-  --color-flag-negative-bg: #E9F1EE;
+  --color-border: #DFE7EC;
+  --color-text: #172B43;
+  --color-text-muted: #718095;
+  --color-sidebar: #0C3448;
+  --color-sidebar-active: #15556B;
+  --color-sidebar-hover: #16475B;
+  --color-sidebar-text: #B7CBD0;
+  --color-sidebar-text-active: #FFFFFF;
+  --color-accent: #087F83;
+  --color-accent-soft: #E5F4F1;
+  --color-flag-positive: #BD4E4E;
+  --color-flag-positive-bg: #FCEDEC;
+  --color-flag-negative: #2D8069;
+  --color-flag-negative-bg: #EAF6EF;
 
-  --font-sans: "Inter", system-ui, sans-serif;
+  --font-sans: "DM Sans", "Avenir Next", "Segoe UI", sans-serif;
+  --font-display: "Manrope", "DM Sans", sans-serif;
   --font-mono: "IBM Plex Mono", ui-monospace, monospace;
+}
+
+:root {
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
 }
 
 body {
@@ -20,4 +33,25 @@ body {
   background: var(--color-bg);
   color: var(--color-text);
   font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
 }
+
+button, input, select, textarea {
+  font: inherit;
+}
+
+button, a {
+  -webkit-tap-highlight-color: transparent;
+}
+
+button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible {
+  outline: 3px solid color-mix(in srgb, var(--color-accent) 25%, transparent);
+  outline-offset: 2px;
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #C7D2EA transparent;
+}
+
+a { text-decoration: none; color: inherit; }
