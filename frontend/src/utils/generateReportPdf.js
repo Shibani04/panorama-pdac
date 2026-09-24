@@ -1,7 +1,40 @@
 import jsPDF from 'jspdf'
 
+async function imageDataUrl(url) {
+  const response = await fetch(url)
+  if (!response.ok) throw new Error(`Unable to load report image (${response.status})`)
+  const blob = await response.blob()
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onloadend = () => resolve(reader.result)
+    reader.onerror = () => reject(new Error('Unable to read report image'))
+    reader.readAsDataURL(blob)
+  })
+}
+
+export async function addReportImages(doc, caseData, apiBase, startY = 20) {
+  const base = apiBase.replace(/\/+$/, '')
+  const paths = [
+    caseData.ct_slices?.base_path && `${base}/${caseData.ct_slices.base_path.replaceAll('\\', '/')}/slice_${caseData.ct_slices.mid_slice ?? 0}.png`,
+    caseData.gradcam_path && `${base}/${caseData.gradcam_path.replaceAll('\\', '/')}`,
+    caseData.segmentation_path && `${base}/${caseData.segmentation_path.replaceAll('\\', '/')}`,
+  ].filter(Boolean)
+  let y = startY
+  for (const [index, path] of paths.entries()) {
+    const image = await imageDataUrl(path)
+    if (y > 245) {
+      doc.addPage()
+      y = 20
+    }
+    doc.setFontSize(10)
+    doc.text(['Preprocessed CT scan', 'Grad-CAM', 'Segmented pancreas boundary'][index], 14, y)
+    doc.addImage(image, 'PNG', 14, y + 4, 80, 60)
+    y += 72
+  }
+}
+
 export function generateReportPdf(caseData) {
-  const { id, prediction, scanner, group, age, sex } = caseData
+  const { id, prediction, group, age, sex } = caseData
   const flagged = prediction >= 0.5
   const flagColor = flagged ? [176, 65, 62] : [47, 111, 94]   // matches --color-flag-positive / negative
   const mutedColor = [107, 107, 104]
@@ -33,7 +66,6 @@ export function generateReportPdf(caseData) {
   y += 30
   const rows = [
     ['Prediction', `${(prediction * 100).toFixed(1)}%`],
-    ['Scanner', scanner],
     ['Referral pathway', group],
     ['Age / Sex', `${age} / ${sex}`],
   ]

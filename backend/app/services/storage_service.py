@@ -1,18 +1,21 @@
 import os
-import shutil
 from datetime import datetime
 
-UPLOAD_DIR = "uploads/ct_scans"
-os.makedirs(UPLOAD_DIR, exist_ok=True)
+def get_ct_extension(filename: str) -> str:
+    """
+    Returns the correct extension, handling the .nii.gz double-extension
+    case explicitly — os.path.splitext() alone would truncate it to '.gz'.
+    """
+    lower = filename.lower()
+    if lower.endswith(".nii.gz"):
+        return ".nii.gz"
+    return os.path.splitext(filename)[1]  # .nii, .dcm, etc.
 
-def save_ct_file(request_id: str, upload_file) -> str:
-    """Saves an uploaded file to local disk, returns the filepath."""
-    ext = os.path.splitext(upload_file.filename)[1] or ".nii.gz"
-    timestamp = datetime.utcnow().strftime("%Y%m%d%H%M%S")
-    filename = f"{request_id}_{timestamp}{ext}"
-    filepath = os.path.join(UPLOAD_DIR, filename)
-
-    with open(filepath, "wb") as f:
-        shutil.copyfileobj(upload_file.file, f)
-
-    return filepath
+def save_ct_file(request_id: str, file) -> str:
+    ext = get_ct_extension(file.filename)
+    timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
+    dest_name = f"{request_id}_{timestamp}{ext}"
+    dest_path = os.path.join("uploads/ct_scans", dest_name)
+    with open(dest_path, "wb") as f:
+        f.write(file.file.read())
+    return dest_path

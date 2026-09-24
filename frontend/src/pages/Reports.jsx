@@ -46,7 +46,7 @@ function Reports() {
   }
 
   const visibleReports = reports.filter((report) => {
-    const searchable = `${report.id} ${report.patient?.name || ''} ${report.scanner || ''}`.toLowerCase()
+    const searchable = `${report.id} ${report.patient?.name || ''}`.toLowerCase()
     return searchable.includes(query.toLowerCase()) && (!dateFilter || report.completed_at?.slice(0, 10) === dateFilter)
   })
 
@@ -73,7 +73,7 @@ function Reports() {
                 {visibleReports.map((report) => (
                   <Link key={report.id} to={`/reports/${report.id}`} className="flex items-center justify-between gap-5 px-5 py-4 transition hover:bg-bg">
                     <div className="flex min-w-0 items-center gap-3"><div className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-flag-negative-bg text-flag-negative"><CheckCircle2 size={18} /></div><div className="min-w-0"><p className="truncate text-sm font-semibold">{report.patient?.name || 'Patient record'}</p><p className="mt-1 text-xs text-text-muted"><span className="font-mono">{report.id}</span> · {report.patient?.age ?? '—'}y, {report.patient?.sex || '—'}</p></div></div>
-                    <div className="hidden items-center gap-8 text-right sm:flex"><div><p className="text-[10px] uppercase tracking-wide text-text-muted">Completed</p><p className="mt-1 text-xs font-medium">{formatDate(report.completed_at)}</p></div><div><p className="text-[10px] uppercase tracking-wide text-text-muted">AI result</p><p className={`mt-1 text-xs font-semibold ${report.prediction >= 0.5 ? 'text-flag-positive' : 'text-flag-negative'}`}>{report.prediction !== null ? `${(report.prediction * 100).toFixed(1)}%` : '—'}</p></div><div><p className="text-[10px] uppercase tracking-wide text-text-muted">Prescription</p><p className="mt-1 text-xs font-semibold text-accent">{report.prescription ? 'Attached' : 'Not added'}</p></div><span className="text-xs font-semibold text-accent">View report →</span></div>
+                    <div className="hidden items-center gap-8 text-right sm:flex"><div><p className="text-[10px] uppercase tracking-wide text-text-muted">Completed</p><p className="mt-1 text-xs font-medium">{formatDate(report.completed_at)}</p></div><div><p className="text-[10px] uppercase tracking-wide text-text-muted">AI result</p><p className={`mt-1 text-xs font-semibold ${report.prediction >= 0.5 ? 'text-flag-positive' : 'text-flag-negative'}`}>{report.prediction !== null ? `${(report.prediction * 100).toFixed(1)}%` : '—'}</p></div>{user?.role === 'doctor' && <div><p className="text-[10px] uppercase tracking-wide text-text-muted">Prescription</p><p className="mt-1 text-xs font-semibold text-accent">{report.prescription ? 'Attached' : 'Not added'}</p></div>}<span className="text-xs font-semibold text-accent">View report →</span></div>
                   </Link>
                 ))}
               </div>

@@ -1,3 +1,5 @@
+import os
+
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
 from sqlalchemy.orm import Session
 from app.database import get_db
@@ -8,12 +10,24 @@ from app.services.ml_service import ml_service
 
 router = APIRouter()
 
-ALLOWED_EXTENSIONS = {".nii", ".gz", ".dcm"}
+ALLOWED_EXTENSIONS = {".nii", ".nii.gz"}
+
+
+def get_ct_extension(filename: str) -> str:
+    """
+    Returns the correct extension, handling the .nii.gz double-extension
+    case explicitly - os.path.splitext() alone would truncate it to '.gz'.
+    """
+    lower = filename.lower()
+    if lower.endswith(".nii.gz"):
+        return ".nii.gz"
+    return os.path.splitext(filename)[1]
+
 
 @router.post("/{request_id}")
 def upload_ct(
     request_id: str,
-    scanner: str = Form(...),
+    scanner: str = Form("missing"),
     file: UploadFile = File(...),
     db: Session = Depends(get_db),
     rad: User = Depends(require_radiologist),
@@ -26,25 +40,43 @@ def upload_ct(
     if req.status not in ("pending",):
         raise HTTPException(400, f"Cannot upload - request status is already '{req.status}'")
 
-    ext = "." + file.filename.rsplit(".", 1)[-1].lower() if "." in file.filename else ""
-    if ext not in ALLOWED_EXTENSIONS and not file.filename.lower().endswith(".nii.gz"):
-        raise HTTPException(400, f"Unsupported file type '{ext}'. Expected .nii, .nii.gz, or .dcm")
+    ext = get_ct_extension(file.filename)
+    if ext == ".dcm":
+        raise HTTPException(400, "DICOM (.dcm) files are not yet supported. Please upload a .nii or .nii.gz file.")
+    if ext not in ALLOWED_EXTENSIONS:
+        raise HTTPException(400, f"Unsupported file type '{ext}'. Expected .nii or .nii.gz.")
 
     filepath = save_ct_file(request_id, file)
 
     patient = db.query(Patient).filter(Patient.id == req.patient_id).first()
 
-    result = ml_service.predict(
-        ct_filepath=filepath,
-        age=patient.age if patient else None,
-        sex=patient.sex if patient else None,
-        scanner=scanner,
-    )
+    try:
+        result = ml_service.predict(
+            ct_filepath=filepath,
+            age=patient.age if patient else None,
+            sex=patient.sex if patient else None,
+            scanner=scanner,
+        )
+    except ValueError as e:
+        # Bad input the uploader can fix (e.g. unsupported .dcm right now)
+        raise HTTPException(400, str(e))
+    except Exception as e:
+        # Model not loaded, corrupt/unreadable NIfTI, cascade failure, etc. --
+        # don't leak an internal stack trace to the frontend, but do log it
+        # server-side so it's debuggable.
+        print(f"[upload] Inference failed for {request_id}: {e}")
+        raise HTTPException(500, "Analysis failed while processing this scan. Please verify the file and try again.")
 
     req.ct_filepath = filepath
-    req.scanner = scanner
+    req.scanner = None
     req.prediction = result["prediction"]
     req.gradcam_path = result["gradcam_path"]
+    req.segmentation_path = result.get("segmentation_path")
+    req.ct_slices = result.get("ct_slices")
+    req.shap_values = result.get("shap_values")
+    req.shap_explanation = result["shap_explanation"]
+    req.confidence_label = result.get("confidence_label")
+    req.threshold = result.get("threshold")
     req.status = "uploaded"
     db.commit()
 

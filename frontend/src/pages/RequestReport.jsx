@@ -5,6 +5,7 @@ import jsPDF from 'jspdf'
 import { getRequestDetail } from '../api/client'
 import { useAuth } from '../context/AuthContext'
 import RequestActionPanel from '../components/RequestActionPanel'
+import { addReportImages } from '../utils/generateReportPdf'
 
 function RequestReport() {
   const { caseId } = useParams()
@@ -16,7 +17,7 @@ function RequestReport() {
     getRequestDetail(caseId).then(setData).catch((e) => setError(e.message))
   }, [caseId])
 
-  function downloadPdf() {
+  async function downloadPdf() {
     const doc = new jsPDF()
     const pred = data.prediction !== null ? `${(data.prediction * 100).toFixed(1)}%` : 'Pending'
 
@@ -27,7 +28,6 @@ function RequestReport() {
     doc.text(`Request ID: ${data.id}`, 14, 32)
     doc.text(`Status: ${data.status}`, 14, 38)
     doc.text(`Patient: ${data.patient?.name || 'N/A'}  (Age ${data.patient?.age ?? '—'}, ${data.patient?.sex ?? '—'})`, 14, 44)
-    doc.text(`Scanner: ${data.scanner || '—'}`, 14, 50)
     doc.text(`Referral pathway: ${data.referral_pathway || '—'}`, 14, 56)
 
     doc.setFontSize(12)
@@ -50,6 +50,13 @@ function RequestReport() {
     )
     doc.text('medical diagnosis. Reviewed and confirmed by a qualified radiologist.', 14, 285)
 
+    try {
+      doc.addPage()
+      await addReportImages(doc, data, apiBase, 20)
+    } catch (err) {
+      setError(err.message)
+      return
+    }
     doc.save(`${data.id}_report.pdf`)
   }
 
@@ -71,6 +78,10 @@ function RequestReport() {
 
   const backTo = user?.role === 'doctor' ? '/doctor' : '/radiologist'
   const isPdac = data.prediction !== null && data.prediction >= 0.5
+  const apiBase = (import.meta.env.VITE_API_URL || 'http://localhost:8000').replace(/\/+$/, '')
+  const gradcamUrl = data.gradcam_path
+    ? `${apiBase}/${data.gradcam_path.replaceAll('\\', '/')}`
+    : ''
 
   return (
     <div className="min-h-screen bg-bg text-text">
@@ -103,10 +114,6 @@ function RequestReport() {
               <p>{data.patient?.name || '—'}</p>
               <p className="text-text-muted">{data.patient?.age ?? '—'}y, {data.patient?.sex ?? '—'}</p>
             </div>
-            <div>
-              <p className="text-xs font-mono text-text-muted uppercase tracking-wide mb-1">Scanner</p>
-              <p>{data.scanner || '—'}</p>
-            </div>
           </div>
         </div>
 
@@ -134,6 +141,13 @@ function RequestReport() {
             <p className="text-xs text-text-muted mt-3">
               AI prediction is a clinical decision-support output, not an autonomous diagnosis.
             </p>
+          </div>
+        )}
+
+        {data.gradcam_path && (
+          <div className="bg-panel border border-border rounded-lg p-6">
+            <p className="text-xs font-mono text-text-muted uppercase tracking-wide mb-2">Grad-CAM</p>
+            <img src={gradcamUrl} alt="Grad-CAM overlay" className="rounded max-w-xs" />
           </div>
         )}
 

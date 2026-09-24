@@ -3,6 +3,9 @@ from sqlalchemy import inspect, text
 from fastapi.middleware.cors import CORSMiddleware
 from app.database import Base, engine
 from app.routers import upload, explain, auth_router, patients, requests, notifications, radiologists
+from fastapi.staticfiles import StaticFiles
+import os
+from fastapi.staticfiles import StaticFiles
 
 Base.metadata.create_all(bind=engine)
 
@@ -13,6 +16,11 @@ with engine.begin() as connection:
         connection.execute(text("ALTER TABLE case_requests ADD COLUMN prescription TEXT NULL"))
 
 app = FastAPI(title="PANORAMA PDAC Detection API")
+
+STATIC_DIR = os.path.join(os.path.dirname(__file__), "static")
+os.makedirs(os.path.join(STATIC_DIR, "gradcam"), exist_ok=True)
+app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
+app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
 
 app.add_middleware(
     CORSMiddleware,

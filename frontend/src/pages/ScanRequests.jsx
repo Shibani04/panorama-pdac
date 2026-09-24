@@ -58,6 +58,9 @@ function ScanRequests() {
                 <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-5 py-4">
                   <span className="text-xs font-mono uppercase tracking-wide text-text-muted">{visibleRequests.length} requests{statusFilter ? ` · ${STATUS_LABELS[statusFilter]}` : ''}</span>
                   <div className="flex gap-2">
+                    <button type="button" onClick={() => setStatusFilter(null)} className={`rounded-md border px-3 py-1.5 text-xs font-semibold transition ${statusFilter === null ? 'border-accent bg-accent text-white' : 'border-border bg-transparent text-text-muted hover:bg-accent-soft hover:text-accent'}`}>
+                      All
+                    </button>
                     {['pending', 'reviewed'].map((status) => (
                       <button key={status} type="button" onClick={() => setStatusFilter(statusFilter === status ? null : status)} className={`rounded-md border px-3 py-1.5 text-xs font-semibold transition ${statusFilter === status ? 'border-accent bg-accent text-white' : 'border-border bg-transparent text-text-muted hover:bg-accent-soft hover:text-accent'}`}>
                         {STATUS_LABELS[status]}

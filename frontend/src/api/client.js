@@ -66,10 +66,9 @@ export async function claimRequest(requestId) {
   return body
 }
 
-export async function uploadCT(requestId, file, scanner) {
+export async function uploadCT(requestId, file) {
   const formData = new FormData()
   formData.append('file', file)
-  formData.append('scanner', scanner)
   const token = localStorage.getItem('token')
   const res = await fetch(`${API_BASE}/upload/${requestId}`, {
     method: 'POST',

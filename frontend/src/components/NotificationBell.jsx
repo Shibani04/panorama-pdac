@@ -1,7 +1,9 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Bell } from 'lucide-react'
-import { getUnreadCount, listMyNotifications, markNotificationRead, markAllNotificationsRead } from '../api/client'
+import { claimRequest, getUnreadCount, listMyNotifications, markNotificationRead, markAllNotificationsRead } from '../api/client'
+import { useAuth } from '../context/AuthContext'
+import ClaimRequestModal from './ClaimRequestModal'
 
 function timeAgo(isoString) {
   const mins = Math.floor((Date.now() - new Date(`${isoString}Z`).getTime()) / 60000)
@@ -16,8 +18,12 @@ function NotificationBell() {
   const [unreadCount, setUnreadCount] = useState(0)
   const [notifications, setNotifications] = useState([])
   const [open, setOpen] = useState(false)
+  const [claimingNotification, setClaimingNotification] = useState(null)
+  const [claimSubmitting, setClaimSubmitting] = useState(false)
+  const [claimError, setClaimError] = useState(null)
   const dropdownRef = useRef(null)
   const navigate = useNavigate()
+  const { user } = useAuth()
 
   async function refreshCount() {
     try {
@@ -67,7 +73,30 @@ function NotificationBell() {
       )))
     }
     setOpen(false)
-    if (notification.request_id) navigate(`/requests/${notification.request_id}`)
+    if (!notification.request_id) return
+    const isUnassigned = user?.role === 'radiologist' && notification.message.toLowerCase().includes('unassigned')
+    if (isUnassigned) {
+      setClaimError(null)
+      setClaimingNotification(notification)
+      return
+    }
+    const isNewRequest = notification.message.toLowerCase().includes('new scan request')
+    navigate(user?.role === 'radiologist' && isNewRequest ? `/upload-analysis?requestId=${notification.request_id}` : `/case/${notification.request_id}`)
+  }
+
+  async function confirmClaim() {
+    setClaimSubmitting(true)
+    try {
+      await claimRequest(claimingNotification.request_id)
+      setNotifications((items) => items.filter((item) => item.request_id !== claimingNotification.request_id))
+      setUnreadCount((count) => Math.max(0, count - 1))
+      navigate(`/upload-analysis?requestId=${claimingNotification.request_id}`)
+      setClaimingNotification(null)
+    } catch (error) {
+      setClaimError(error.message)
+    } finally {
+      setClaimSubmitting(false)
+    }
   }
 
   async function handleMarkAllRead() {
@@ -118,6 +147,13 @@ function NotificationBell() {
           </div>
         </div>
       )}
+      <ClaimRequestModal
+        requestId={claimingNotification?.request_id}
+        submitting={claimSubmitting}
+        error={claimError}
+        onCancel={() => { setClaimError(null); setClaimingNotification(null) }}
+        onConfirm={confirmClaim}
+      />
     </div>
   )
 }

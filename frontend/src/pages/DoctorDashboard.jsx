@@ -7,7 +7,6 @@ import Sidebar from '../components/Sidebar'
 import StatsOverview from '../components/StatsOverview'
 import EmptyState from '../components/EmptyState'
 import RequestScanModal from '../components/RequestScanModal'
-import DashboardAnalytics from '../components/DashboardAnalytics'
 import PatientEditModal from '../components/PatientEditModal'
 import PatientHistoryModal from '../components/PatientHistoryModal'
 import Topbar from '../components/Topbar'
@@ -105,10 +104,10 @@ function DoctorDashboard() {
     <div className="h-screen overflow-hidden bg-bg text-text flex">
       <Sidebar role="doctor" activeKey={activeKey} onNavigate={handleNavigate} />
 
-      <div className="h-screen min-h-0 min-w-0 flex-1 overflow-y-auto">
+      <div className="h-screen min-h-0 min-w-0 flex-1 overflow-hidden">
         <Topbar title={activeKey === 'patients' ? 'Patients' : 'Doctor dashboard'} user={user} />
 
-        <div className="p-8 space-y-6">
+        <div className="flex h-[calc(100%-73px)] min-h-0 flex-col gap-6 overflow-hidden p-8">
           {error && (
             <div className="bg-flag-positive-bg text-flag-positive text-sm rounded px-3 py-2">
               {error}
@@ -135,13 +134,12 @@ function DoctorDashboard() {
                       </div>
                     }
                   />
-                  <DashboardAnalytics requests={requests} />
                 </>
               )}
 
-              <div className={`grid gap-6 ${activeKey === 'dashboard' ? 'grid-cols-2' : 'grid-cols-1'}`}>
+              <div className={`grid min-h-0 flex-1 gap-6 ${activeKey === 'dashboard' ? 'grid-cols-2' : 'grid-cols-1'}`}>
                 {(activeKey === 'dashboard' || activeKey === 'patients' || activeKey === 'add-patient') && (
-                <div ref={patientsRef} className="bg-panel border border-border rounded-xl shadow-[0_6px_20px_rgba(49,87,183,0.04)] scroll-mt-6 overflow-hidden">
+                <div ref={patientsRef} className="min-h-0 overflow-y-auto bg-panel border border-border rounded-xl shadow-[0_6px_20px_rgba(49,87,183,0.04)] scroll-mt-6">
                   <div className="px-4 py-3 border-b border-border flex items-center justify-between gap-3 flex-wrap">
                     <span className="text-xs font-mono text-text-muted uppercase tracking-wide">
                       {patients.length} patients
@@ -189,7 +187,7 @@ function DoctorDashboard() {
                 )}
 
                 {(activeKey === 'dashboard' || activeKey === 'requests' || activeKey === 'status' || ['pending', 'reviewed'].includes(activeKey)) && (
-                <div ref={requestsRef} className="bg-panel border border-border rounded-xl shadow-[0_6px_20px_rgba(49,87,183,0.04)] scroll-mt-6 overflow-hidden">
+                <div ref={requestsRef} className="min-h-0 overflow-y-auto bg-panel border border-border rounded-xl shadow-[0_6px_20px_rgba(49,87,183,0.04)] scroll-mt-6">
                   <div className="px-4 py-3 border-b border-border flex items-center justify-between flex-wrap gap-2">
                     <span className="text-xs font-mono text-text-muted uppercase tracking-wide">
                       {visibleRequests.length} requests{statusFilter ? ` · ${STATUS_LABELS[statusFilter]}` : ''}

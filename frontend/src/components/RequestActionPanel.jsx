@@ -5,7 +5,6 @@ import { useAuth } from '../context/AuthContext'
 
 function RequestActionPanel({ request, onUpdate }) {
   const { user } = useAuth()
-  const [scanner, setScanner] = useState('SIEMENS')
   const [file, setFile] = useState(null)
   const [notes, setNotes] = useState('')
   const [pathway, setPathway] = useState('radiology')
@@ -30,7 +29,7 @@ function RequestActionPanel({ request, onUpdate }) {
     setError(null)
     setSubmitting(true)
     try {
-      await uploadCT(request.id, file, scanner)
+      await uploadCT(request.id, file)
       setFile(null)
       await onUpdate()
     } catch (err) {
@@ -90,13 +89,6 @@ function RequestActionPanel({ request, onUpdate }) {
         <form onSubmit={handleUpload} className="space-y-3 max-w-sm">
           <p className="text-sm font-medium mb-2">Upload CT scan for {request.id}</p>
           <input
-            required
-            placeholder="Scanner (e.g. SIEMENS)"
-            value={scanner}
-            onChange={(e) => setScanner(e.target.value)}
-            className="w-full border border-border rounded-lg px-3 py-2.5 text-sm bg-bg focus:outline-none focus:border-sidebar-text-active"
-          />
-          <input
             id="ct-file-input"
             required
             type="file"
@@ -135,30 +127,30 @@ function RequestActionPanel({ request, onUpdate }) {
       )}
 
       {request.status === 'uploaded' && (
-        <form onSubmit={handleComplete} className="space-y-3 max-w-sm">
-          <p className="text-sm font-medium mb-2">
-            Complete review — prediction: {(request.prediction * 100).toFixed(0)}%
-          </p>
-          <select
-            value={pathway}
-            onChange={(e) => setPathway(e.target.value)}
-            className="w-full border border-border rounded-lg px-3 py-2.5 text-sm bg-bg focus:outline-none focus:border-sidebar-text-active"
-          >
-            <option value="radiology">Routine follow-up (radiology)</option>
-            <option value="tissue-confirmed">Refer for biopsy (tissue-confirmed)</option>
-            <option value="external">External / other</option>
-          </select>
-          <textarea
-            required
-            placeholder="Notes"
-            value={notes}
-            onChange={(e) => setNotes(e.target.value)}
-            className="w-full border border-border rounded-lg px-3 py-2.5 text-sm bg-bg h-24 focus:outline-none focus:border-sidebar-text-active"
-          />
-          <button type="submit" disabled={submitting} className="bg-accent text-white text-sm font-semibold px-4 py-2.5 rounded-lg hover:brightness-105 disabled:opacity-50 transition">
-            {submitting ? 'Submitting…' : 'Complete review'}
-          </button>
-        </form>
+        <div className="space-y-5">
+          <form onSubmit={handleComplete} className="space-y-3 max-w-sm">
+            <p className="text-sm font-medium mb-2">Complete review</p>
+            <select
+              value={pathway}
+              onChange={(e) => setPathway(e.target.value)}
+              className="w-full border border-border rounded-lg px-3 py-2.5 text-sm bg-bg focus:outline-none focus:border-sidebar-text-active"
+            >
+              <option value="radiology">Routine follow-up (radiology)</option>
+              <option value="tissue-confirmed">Refer for biopsy (tissue-confirmed)</option>
+              <option value="external">External / other</option>
+            </select>
+            <textarea
+              required
+              placeholder="Notes"
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              className="w-full border border-border rounded-lg px-3 py-2.5 text-sm bg-bg h-24 focus:outline-none focus:border-sidebar-text-active"
+            />
+            <button type="submit" disabled={submitting} className="bg-accent text-white text-sm font-semibold px-4 py-2.5 rounded-lg hover:brightness-105 disabled:opacity-50 transition">
+              {submitting ? 'Submitting…' : 'Complete review'}
+            </button>
+          </form>
+        </div>
       )}
     </div>
   )

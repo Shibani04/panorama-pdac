@@ -13,13 +13,13 @@ router = APIRouter()
 
 class RequestCreate(BaseModel):
     patient_id: str
-    radiologist_id: Optional[str] = None  # doctor can pick a specific radiologist, or leave unassigned
-    comment: Optional[str] = None   # <-- new
+    radiologist_id: Optional[str] = None
+    comment: Optional[str] = None
 
 
 class CompleteRequest(BaseModel):
     notes: str
-    referral_pathway: str  # "radiology", "tissue-confirmed", or "external"
+    referral_pathway: str
 
 
 class PrescriptionUpdate(BaseModel):
@@ -60,10 +60,9 @@ def create_request(payload: RequestCreate, db: Session = Depends(get_db), doctor
 
 @router.get("/mine")
 def list_my_requests(db: Session = Depends(get_db), user: User = Depends(get_current_user)):
-    """Doctors see requests they created; radiologists see requests assigned to them OR unassigned pending ones."""
     if user.role == "doctor":
         reqs = db.query(CaseRequest).filter(CaseRequest.doctor_id == user.id).all()
-    else:  # radiologist
+    else:
         reqs = db.query(CaseRequest).filter(
             (CaseRequest.radiologist_id == user.id) |
             ((CaseRequest.radiologist_id.is_(None)) & (CaseRequest.status == "pending"))
@@ -87,9 +86,6 @@ def get_request(request_id: str, db: Session = Depends(get_db), user: User = Dep
         raise HTTPException(404, "Request not found")
 
     is_owner_doctor = user.role == "doctor" and req.doctor_id == user.id
-    # Any radiologist can VIEW any request (read-only) — this is what lets a stale
-    # broadcast notification resolve to a friendly "already assigned" message
-    # instead of a 403. Actions (claim/upload/complete) are still gated separately.
     is_radiologist = user.role == "radiologist"
     if not (is_owner_doctor or is_radiologist):
         raise HTTPException(403, "You do not have access to this request")
@@ -104,7 +100,13 @@ def get_request(request_id: str, db: Session = Depends(get_db), user: User = Dep
         "referral_pathway": req.referral_pathway,
         "prediction": req.prediction,
         "gradcam_path": req.gradcam_path,
-        "doctor_notes": req.doctor_notes,        # <-- new
+        "segmentation_path": req.segmentation_path,
+        "ct_slices": req.ct_slices,
+        "shapValues": req.shap_values,
+        "shap_explanation": req.shap_explanation,   # <-- new
+        "confidence_label": req.confidence_label,
+        "threshold": req.threshold,
+        "doctor_notes": req.doctor_notes,
         "prescription": req.prescription,
         "radiologist_notes": req.radiologist_notes,
         "patient": {
@@ -145,13 +147,20 @@ def update_prescription(
 
 @router.patch("/{request_id}/claim")
 def claim_request(request_id: str, db: Session = Depends(get_db), rad: User = Depends(require_radiologist)):
-    """
-    Atomic claim: the UPDATE only succeeds if radiologist_id is still NULL at the
-    database level. If two radiologists click 'Claim' at the same instant, the
-    database's row lock ensures only one UPDATE actually matches a row (rowcount=1)
-    — the other gets rowcount=0, so we can tell them clearly they lost the race,
-    instead of both silently succeeding and overwriting each other.
-    """
+    req = db.query(CaseRequest).filter(CaseRequest.id == request_id).first()
+    if not req:
+        raise HTTPException(404, "Request not found")
+
+    if req.radiologist_id == rad.id:
+        db.query(Notification).filter(
+            Notification.request_id == request_id,
+        ).delete(synchronize_session=False)
+        db.commit()
+        return {"success": True, "message": "Request already claimed by you"}
+
+    if req.radiologist_id is not None:
+        raise HTTPException(409, "This request was just claimed by another radiologist")
+
     rows_updated = db.query(CaseRequest).filter(
         CaseRequest.id == request_id,
         CaseRequest.radiologist_id.is_(None),
@@ -159,15 +168,10 @@ def claim_request(request_id: str, db: Session = Depends(get_db), rad: User = De
     db.commit()
 
     if rows_updated == 0:
-        req = db.query(CaseRequest).filter(CaseRequest.id == request_id).first()
-        if not req:
-            raise HTTPException(404, "Request not found")
         raise HTTPException(409, "This request was just claimed by another radiologist")
 
-    # Clean up stale broadcast notifications for every OTHER radiologist now that it's claimed
     db.query(Notification).filter(
         Notification.request_id == request_id,
-        Notification.user_id != rad.id,
     ).delete(synchronize_session=False)
     db.commit()
 

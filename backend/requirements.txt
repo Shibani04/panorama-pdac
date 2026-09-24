@@ -1,6 +1,9 @@
 fastapi
 uvicorn[standard]
 torch
+monai
+nibabel
+matplotlib
 numpy
 scipy
 python-multipart

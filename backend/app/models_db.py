@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, Integer, Float, ForeignKey, DateTime, Text
+from sqlalchemy import Column, String, Integer, Float, ForeignKey, DateTime, Text, JSON
 from datetime import datetime
 import uuid
 from app.database import Base
@@ -12,7 +12,7 @@ class User(Base):
     name = Column(String(120), nullable=False)
     email = Column(String(120), unique=True, nullable=False, index=True)
     password_hash = Column(String(255), nullable=False)
-    role = Column(String(20), nullable=False)  # "doctor" or "radiologist"
+    role = Column(String(20), nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow)
 
 class Patient(Base):
@@ -31,14 +31,21 @@ class CaseRequest(Base):
     patient_id = Column(String(50), ForeignKey("patients.id"), nullable=False)
     doctor_id = Column(String(50), ForeignKey("users.id"), nullable=False)
     radiologist_id = Column(String(50), ForeignKey("users.id"), nullable=True)
-    status = Column(String(20), default="pending")  # pending -> uploaded -> reviewed
+    status = Column(String(20), default="pending")
     scanner = Column(String(50), nullable=True)
-    referral_pathway = Column(String(30), nullable=True)  # radiology / tissue-confirmed / external
+    referral_pathway = Column(String(30), nullable=True)
     ct_filepath = Column(String(255), nullable=True)
     prediction = Column(Float, nullable=True)
     gradcam_path = Column(String(255), nullable=True)
+    segmentation_path = Column(String(255), nullable=True)          # new
+    ct_slices = Column(JSON, nullable=True)                          # new
+    shap_values = Column(JSON, nullable=True)                        # new
+    confidence_label = Column(String(20), nullable=True)             # new
+    threshold = Column(Float, nullable=True)                         # new
     doctor_notes = Column(Text, nullable=True)
     radiologist_notes = Column(Text, nullable=True)
+    shap_explanation = Column(Text, nullable=True) 
+    prescription = Column(Text, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     completed_at = Column(DateTime, nullable=True)
 
